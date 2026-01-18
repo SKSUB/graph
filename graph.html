@@ -1,0 +1,362 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Interactive AI Graph</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    html,body{height:100%;margin:0;font-family:Segoe UI,Roboto,Arial}
+    #app{display:flex;height:100%}
+    #cy{flex:1;position:relative;background:#fff}
+    #panel{width:300px;padding:12px;box-sizing:border-box;border-left:1px solid #ddd;background:#fafafa}
+    .btn{display:inline-block;margin:4px 4px;padding:8px 10px;background:#0077be;color:#fff;border-radius:6px;cursor:pointer}
+    .btn.secondary{background:#555}
+    h3{margin:6px 0 8px 0;font-size:15px}
+    .legend-item{margin:6px 0;padding:6px;border-radius:6px}
+  </style>
+  <script src="https://unpkg.com/cytoscape/dist/cytoscape.min.js"></script>
+  <script src="https://unpkg.com/dagre@0.8.5/dist/dagre.min.js"></script>
+  <script src="https://unpkg.com/cytoscape-dagre/cytoscape-dagre.js"></script>
+</head>
+<body>
+  <div id="app">
+    <div id="cy"></div>
+    <div id="panel">
+      <h3>Controls</h3>
+      <div>
+        <button class="btn" id="fit">Fit</button>
+        <button class="btn" id="zoomIn">Zoom +</button>
+        <button class="btn" id="zoomOut">Zoom -</button>
+      </div>
+      <div style="margin-top:8px">
+        <button class="btn secondary" id="export">Export PNG</button>
+      </div>
+
+      <h3>Search / Actions</h3>
+      <input id="search" placeholder="Find node id or text" style="width:100%;padding:8px;margin-bottom:8px" />
+      <div style="font-size:13px;color:#444">
+        Drag nodes to reorganize. Click a node to focus. Double-click background to reset.
+      </div>
+
+      <h3>Legend</h3>
+      <div class="legend-item" style="background:#e1f5ff;border:2px solid #0077be">Paradigm</div>
+      <div class="legend-item" style="background:#fff4e1;border:2px solid #ff9800">Method</div>
+      <div class="legend-item" style="background:#f1f8e9;border:2px solid #689f38">Model</div>
+      <div class="legend-item" style="background:#fce4ec;border:2px solid #c2185b">Application</div>
+      <div class="legend-item" style="background:#f3e5f5;border:2px solid #7b1fa2">Foundation</div>
+      <div class="legend-item" style="background:#e8f5e9;border:2px solid #2e7d32">Flow</div>
+
+
+    </div>
+  </div>
+
+  <script>
+    // Node & edge definitions converted from your mermaid source
+    const elements = {
+      nodes: [
+        { data: { id: 'A', label: '🤖 Artificial Intelligence (AI)\\nSystems that exhibit intelligent behavior', type:'paradigm'} },
+
+        { data: { id: 'B', label: '⚙️ Symbolic / Declarative AI\\nLogic, rules, planning, search', type:'paradigm'} },
+        { data: { id: 'C', label: '📊 Probabilistic AI\\nReasoning under uncertainty', type:'paradigm'} },
+        { data: { id: 'D', label: '🧩 Machine Learning (ML)\\nLearn patterns from data', type:'paradigm'} },
+
+        { data: { id: 'B1', label:'Logic (Propositional, FOL)', type:'method'} },
+        { data: { id: 'B2', label:'Ontologies / Knowledge Graphs', type:'method'} },
+        { data: { id: 'B3', label:'Planning (STRIPS, PDDL)', type:'method'} },
+        { data: { id: 'B4', label:'Search (A*, CSP, SAT)', type:'method'} },
+        { data: { id: 'B5', label:'Rule-based / Expert Systems', type:'method'} },
+
+        { data: { id: 'C1', label:'Bayesian Networks', type:'method'} },
+        { data: { id: 'C2', label:'Hidden Markov Models (HMMs)', type:'method'} },
+        { data: { id: 'C3', label:'Markov Decision Processes (MDPs)', type:'method'} },
+        { data: { id: 'C4', label:'Probabilistic Graphical Models (PGMs)', type:'method'} },
+
+        { data: { id: 'D1', label:'Supervised Learning', type:'method'} },
+        { data: { id: 'D2', label:'Unsupervised Learning', type:'method'} },
+        { data: { id: 'D3', label:'Self-Supervised Learning', type:'method'} },
+        { data: { id: 'D4', label:'Reinforcement Learning (RL)', type:'method'} },
+        { data: { id: 'D5', label:'Semi-Supervised Learning', type:'method'} },
+        { data: { id: 'D6', label:'Meta-Learning / Few-Shot Learning', type:'method'} },
+
+        { data: { id: 'D1a', label:'Linear / Logistic Regression', type:'model'} },
+        { data: { id: 'D1b', label:'Support Vector Machines (SVM)', type:'model'} },
+        { data: { id: 'D1c', label:'Decision Trees', type:'model'} },
+        { data: { id: 'D1d', label:'Random Forests / Gradient Boosting', type:'model'} },
+        { data: { id: 'D1e', label:'k-Nearest Neighbors (k-NN)', type:'model'} },
+        { data: { id: 'D1f', label:'Naive Bayes', type:'model'} },
+
+        { data: { id: 'D2a', label:'Clustering (k-Means, DBSCAN, Hierarchical)', type:'model'} },
+        { data: { id: 'D2b', label:'PCA / Dimensionality Reduction', type:'model'} },
+        { data: { id: 'D2c', label:'Autoencoders', type:'model'} },
+        { data: { id: 'D2d', label:'Anomaly Detection', type:'model'} },
+
+        { data: { id: 'E', label:'Neural Networks (NN)', type:'method'} },
+        { data: { id: 'E1', label:'Shallow Neural Networks\\n(Perceptrons, MLPs)', type:'model'} },
+        { data: { id: 'E2', label:'Deep Neural Networks (DNNs)\\nDeep Learning', type:'method'} },
+
+        { data: { id: 'F1', label:'Convolutional Neural Networks (CNNs)', type:'model'} },
+        { data: { id: 'F2', label:'Recurrent Neural Networks\\n(RNN / LSTM / GRU)', type:'model'} },
+        { data: { id: 'F3', label:'Transformers', type:'model'} },
+        { data: { id: 'F4', label:'Graph Neural Networks (GNNs)', type:'model'} },
+        { data: { id: 'F5', label:'Generative Models\\n(GANs, VAEs, Diffusion, Flows)', type:'model'} },
+
+        { data: { id: 'APP1', label:'Computer Vision\\n(Classification, Detection, Segmentation)', type:'application'} },
+        { data: { id: 'APP2', label:'Sequential Modeling\\n(Time Series, Speech Recognition)', type:'application'} },
+        { data: { id: 'APP3', label:'Language & Multimodal\\n(LLMs, VLMs, Code Gen, ViT)', type:'application'} },
+        { data: { id: 'APP4', label:'Graph-Based Tasks\\n(Molecular Design, Social Networks)', type:'application'} },
+        { data: { id: 'APP5', label:'Generative AI\\n(Image/Video/Audio Synthesis)', type:'application'} },
+
+        { data: { id: 'H1', label:'Model-Free RL', type:'method'} },
+        { data: { id: 'H2', label:'Model-Based RL', type:'method'} },
+        { data: { id: 'H3', label:'Multi-Agent RL', type:'method'} },
+
+        { data: { id: 'H1a', label:'Value-Based (Q-Learning, DQN)', type:'model'} },
+        { data: { id: 'H1b', label:'Policy-Based (REINFORCE, PPO)', type:'model'} },
+        { data: { id: 'H1c', label:'Actor-Critic (A3C, SAC)', type:'model'} },
+
+        { data: { id: 'H2a', label:'Planning with Models', type:'model'} },
+        { data: { id: 'H2b', label:'World Models', type:'model'} },
+
+        { data: { id: 'I1', label:'🎯 RLHF / DPO / Constitutional AI\\n(Alignment)', type:'foundation'} },
+        { data: { id: 'I2', label:'⚡ Optimization & Scaling\\n(SGD, Adam, Backprop, Quantization, MoE)', type:'foundation'} },
+        { data: { id: 'I3', label:'🔗 Neuro-Symbolic AI\\n(Hybrid reasoning)', type:'foundation'} },
+
+        { data: { id: 'FLOW1', label:'📐 Representation\\n(Symbols, Features, Embeddings)', type:'flow'} },
+        { data: { id: 'FLOW2', label:'🎲 Uncertainty\\n(Probability, Belief States)', type:'flow'} },
+        { data: { id: 'FLOW3', label:'🔄 Optimization\\n(Loss/Reward/Posterior)', type:'flow'} },
+        { data: { id: 'FLOW4', label:'🎯 Action/Decision\\n(Output, Policy, Inference)', type:'flow'} }
+      ],
+      edges: [
+        { data:{id:'A-B',source:'A',target:'B'} },
+        { data:{id:'A-C',source:'A',target:'C'} },
+        { data:{id:'A-D',source:'A',target:'D'} },
+
+        { data:{id:'B-B1',source:'B',target:'B1'} },
+        { data:{id:'B-B2',source:'B',target:'B2'} },
+        { data:{id:'B-B3',source:'B',target:'B3'} },
+        { data:{id:'B-B4',source:'B',target:'B4'} },
+        { data:{id:'B-B5',source:'B',target:'B5'} },
+
+        { data:{id:'C-C1',source:'C',target:'C1'} },
+        { data:{id:'C-C2',source:'C',target:'C2'} },
+        { data:{id:'C-C3',source:'C',target:'C3'} },
+        { data:{id:'C-C4',source:'C',target:'C4'} },
+
+        { data:{id:'D-D1',source:'D',target:'D1'} },
+        { data:{id:'D-D2',source:'D',target:'D2'} },
+        { data:{id:'D-D3',source:'D',target:'D3'} },
+        { data:{id:'D-D4',source:'D',target:'D4'} },
+        { data:{id:'D-D5',source:'D',target:'D5'} },
+        { data:{id:'D-D6',source:'D',target:'D6'} },
+
+        { data:{id:'D1-D1a',source:'D1',target:'D1a'} },
+        { data:{id:'D1-D1b',source:'D1',target:'D1b'} },
+        { data:{id:'D1-D1c',source:'D1',target:'D1c'} },
+        { data:{id:'D1-D1d',source:'D1',target:'D1d'} },
+        { data:{id:'D1-D1e',source:'D1',target:'D1e'} },
+        { data:{id:'D1-D1f',source:'D1',target:'D1f'} },
+
+        { data:{id:'D2-D2a',source:'D2',target:'D2a'} },
+        { data:{id:'D2-D2b',source:'D2',target:'D2b'} },
+        { data:{id:'D2-D2c',source:'D2',target:'D2c'} },
+        { data:{id:'D2-D2d',source:'D2',target:'D2d'} },
+
+        { data:{id:'D-E',source:'D',target:'E'} },
+
+        { data:{id:'E-E1',source:'E',target:'E1'} },
+        { data:{id:'E-E2',source:'E',target:'E2'} },
+
+        { data:{id:'E2-F1',source:'E2',target:'F1'} },
+        { data:{id:'E2-F2',source:'E2',target:'F2'} },
+        { data:{id:'E2-F3',source:'E2',target:'F3'} },
+        { data:{id:'E2-F4',source:'E2',target:'F4'} },
+        { data:{id:'E2-F5',source:'E2',target:'F5'} },
+
+        { data:{id:'F1-APP1',source:'F1',target:'APP1'} },
+        { data:{id:'F2-APP2',source:'F2',target:'APP2'} },
+        { data:{id:'F3-APP3',source:'F3',target:'APP3'} },
+        { data:{id:'F4-APP4',source:'F4',target:'APP4'} },
+        { data:{id:'F5-APP5',source:'F5',target:'APP5'} },
+
+        { data:{id:'D4-H1',source:'D4',target:'H1'} },
+        { data:{id:'D4-H2',source:'D4',target:'H2'} },
+        { data:{id:'D4-H3',source:'D4',target:'H3'} },
+
+        { data:{id:'H1-H1a',source:'H1',target:'H1a'} },
+        { data:{id:'H1-H1b',source:'H1',target:'H1b'} },
+        { data:{id:'H1-H1c',source:'H1',target:'H1c'} },
+
+        { data:{id:'H2-H2a',source:'H2',target:'H2a'} },
+        { data:{id:'H2-H2b',source:'H2',target:'H2b'} },
+
+        { data:{id:'I1-APP3',source:'APP3',target:'I1', label:'Aligned via'} },
+        { data:{id:'I1-H1b',source:'I1',target:'H1b'} },
+        { data:{id:'I1-H1c',source:'I1',target:'H1c'} },
+
+        { data:{id:'I2-D',source:'I2',target:'D'} },
+        { data:{id:'I2-E',source:'I2',target:'E'} },
+        { data:{id:'I2-E2',source:'I2',target:'E2'} },
+
+        { data:{id:'I3-B',source:'I3',target:'B'} },
+        { data:{id:'I3-E2',source:'I3',target:'E2'} },
+        { data:{id:'F4-I3',source:'F4',target:'I3'} },
+        { data:{id:'APP3-I3',source:'APP3',target:'I3'} },
+
+        { data:{id:'FLOW1-FLOW2',source:'FLOW1',target:'FLOW2'} },
+        { data:{id:'FLOW2-FLOW3',source:'FLOW2',target:'FLOW3'} },
+        { data:{id:'FLOW3-FLOW4',source:'FLOW3',target:'FLOW4'} },
+
+        // dashed / conceptual edges (style handled below)
+        { data:{id:'C4-C1',source:'C4',target:'C1', dashed:true, label:'Conceptual foundation'} },
+        { data:{id:'C4-C2',source:'C4',target:'C2', dashed:true, label:'Conceptual foundation'} },
+        { data:{id:'C4-C3',source:'C4',target:'C3', dashed:true, label:'Framework for'} },
+
+        { data:{id:'C1-D1a',source:'C1',target:'D1a', dashed:true, label:'Probabilistic inference'} },
+        { data:{id:'C1-F4',source:'C1',target:'F4', dashed:true, label:'Graphical structure influences'} },
+        { data:{id:'C2-F2',source:'C2',target:'F2', dashed:true, label:'Historical precursor to'} },
+        { data:{id:'C3-D4',source:'C3',target:'D4', dashed:true, label:'Formal framework for'} },
+        { data:{id:'C3-H1',source:'C3',target:'H1', dashed:true, label:'State-action dynamics'} },
+
+        { data:{id:'B2-F4',source:'B2',target:'F4', dashed:true, label:'Structure for'} },
+        { data:{id:'B2-APP3',source:'B2',target:'APP3', dashed:true, label:'Knowledge retrieval for'} },
+        { data:{id:'B3-D4',source:'B3',target:'D4', dashed:true, label:'Reward shaping in'} },
+        { data:{id:'B3-H2',source:'B3',target:'H2', dashed:true, label:'Goal-oriented'} },
+        { data:{id:'B4-H1a',source:'B4',target:'H1a', dashed:true, label:'Combined with'} },
+        { data:{id:'B4-H2',source:'B4',target:'H2', dashed:true, label:'MCTS + RL'} },
+
+        { data:{id:'E1-D1',source:'E1',target:'D1', dashed:true} },
+        { data:{id:'E1-D2',source:'E1',target:'D2', dashed:true} },
+        { data:{id:'E2-D1',source:'E2',target:'D1', dashed:true} },
+        { data:{id:'E2-D2',source:'E2',target:'D2', dashed:true} },
+        { data:{id:'E2-D3',source:'E2',target:'D3', dashed:true, label:'Enables'} },
+        { data:{id:'E2-D4',source:'E2',target:'D4', dashed:true, label:'Deep RL uses'} },
+
+        { data:{id:'D3-F3',source:'D3',target:'F3', dashed:true, label:'Pretraining for'} },
+        { data:{id:'D3-F1',source:'D3',target:'F1', dashed:true, label:'Contrastive methods for'} },
+        { data:{id:'D3-APP3',source:'D3',target:'APP3', dashed:true, label:'Masked modeling for'} },
+
+        { data:{id:'H1-E2',source:'H1',target:'E2', dashed:true, label:'Uses DNNs as approximators'} },
+        { data:{id:'H2-E2',source:'H2',target:'E2', dashed:true, label:'Uses DNNs for dynamics'} },
+        { data:{id:'H2-C3',source:'H2',target:'C3', dashed:true, label:'Grounded in'} },
+        { data:{id:'H2b-F5',source:'H2b',target:'F5', dashed:true, label:'Learned via'} },
+
+        { data:{id:'F5-APP3',source:'F5',target:'APP3', dashed:true, label:'Pretraining method for'} },
+        { data:{id:'F5-D2c',source:'F5',target:'D2c', dashed:true, label:'Extends autoencoders'} },
+
+        { data:{id:'F3-F5',source:'F3',target:'F5', dashed:true, label:'Diffusion Transformers (DiT)'} },
+
+        { data:{id:'F4-B2',source:'F4',target:'B2', dashed:true, label:'Operates on'} },
+
+        { data:{id:'D1f-C1',source:'D1f',target:'C1', dashed:true, label:'Probabilistic classifier'} },
+        { data:{id:'D2c-E2',source:'D2c',target:'E2', dashed:true, label:'Representation learning'} },
+
+        { data:{id:'D6-APP3',source:'D6',target:'APP3', dashed:true} },
+        { data:{id:'D6-E2',source:'D6',target:'E2', dashed:true} },
+        { data:{id:'D6-D4',source:'D6',target:'D4', dashed:true, label:'Adaptation in'} },
+
+        { data:{id:'I1-H1b_2',source:'I1',target:'H1b', dashed:true, label:'Uses policy optimization'} },
+        { data:{id:'I1-H1c_2',source:'I1',target:'H1c', dashed:true, label:'Direct preference'} },
+
+        { data:{id:'I2-D_2',source:'I2',target:'D', dashed:true, label:'Enables all gradient-based'} },
+        { data:{id:'I2-E_2',source:'I2',target:'E', dashed:true, label:'Training foundation'} },
+        { data:{id:'I2-E2_2',source:'I2',target:'E2', dashed:true, label:'Scales'} },
+        { data:{id:'I2-F3_2',source:'I2',target:'F3', dashed:true, label:'Efficient inference'} },
+
+        { data:{id:'I3-B2_2',source:'I3',target:'B2', dashed:true} },
+        { data:{id:'APP3-I3_2',source:'APP3',target:'I3', dashed:true, label:'Emerging in'} },
+
+        { data:{id:'FLOW1-B',source:'FLOW1',target:'B', dashed:true, label:'Contributes'} },
+        { data:{id:'FLOW2-C',source:'FLOW2',target:'C', dashed:true, label:'Contributes'} },
+        { data:{id:'FLOW3-D',source:'FLOW3',target:'D', dashed:true, label:'Contributes'} },
+        { data:{id:'FLOW3-E',source:'FLOW3',target:'E', dashed:true, label:'Contributes'} },
+        { data:{id:'FLOW4-D4',source:'FLOW4',target:'D4', dashed:true, label:'Contributes'} },
+        { data:{id:'FLOW4-I1',source:'FLOW4',target:'I1', dashed:true, label:'Shapes'} }
+      ]
+    };
+
+    // initialize cytoscape
+    const cy = cytoscape({
+      container: document.getElementById('cy'),
+      elements: [...elements.nodes.map(n=>({data:n.data})), ...elements.edges.map(e=>({data:e.data}))],
+      style: [
+        { selector: 'node', style: {
+          'label': 'data(label)',
+          'text-wrap': 'wrap',
+          'text-max-width': 160,
+          'font-size': 11,
+          'text-valign': 'center',
+          'text-halign': 'center',
+          'padding': '8px',
+          'background-color': '#fff',
+          'border-width': 2,
+          'border-color': '#888',
+          'shape': 'roundrectangle',
+          'width': 'label',
+          'height': 'label'
+        }},
+        { selector: "node[type='paradigm']", style:{ 'background-color':'#e1f5ff','border-color':'#0077be' }},
+        { selector: "node[type='method']", style:{ 'background-color':'#fff4e1','border-color':'#ff9800' }},
+        { selector: "node[type='model']", style:{ 'background-color':'#f1f8e9','border-color':'#689f38' }},
+        { selector: "node[type='application']", style:{ 'background-color':'#fce4ec','border-color':'#c2185b' }},
+        { selector: "node[type='foundation']", style:{ 'background-color':'#f3e5f5','border-color':'#7b1fa2' }},
+        { selector: "node[type='flow']", style:{ 'background-color':'#e8f5e9','border-color':'#2e7d32' }},
+
+        { selector: 'edge', style: {
+          'curve-style':'bezier',
+          'target-arrow-shape':'triangle',
+          'target-arrow-color':'#666',
+          'line-color':'#bbb',
+          'width': 2,
+          'label':'data(label)',
+          'font-size': 10,
+          'text-background-color':'#fff',
+          'text-background-opacity':0.9,
+          'text-background-padding': 2,
+          'text-rotation': 'autorotate'
+        }},
+        { selector: 'edge[?dashed]', style: { 'line-style':'dashed', 'target-arrow-shape':'none','line-color':'#999' } }
+      ],
+      layout: { name: 'dagre', rankDir: 'TB', nodeSep: 20, edgeSep: 6, rankSep: 60 },
+      wheelSensitivity: 0.2
+    });
+
+    // basic interactions
+    cy.on('tap', 'node', e=>{
+      const n = e.target;
+      cy.animate({ fit: { eles: n, padding: 60 }, duration: 400 });
+    });
+
+    document.getElementById('fit').onclick = ()=> cy.fit(40);
+    document.getElementById('zoomIn').onclick = ()=> cy.zoom({level: cy.zoom()*1.2, renderedPosition: {x: cy.width()/2, y: cy.height()/2}});
+    document.getElementById('zoomOut').onclick = ()=> cy.zoom({level: cy.zoom()*0.8, renderedPosition: {x: cy.width()/2, y: cy.height()/2}});
+    document.getElementById('export').onclick = ()=>{
+      const png = cy.png({full: true, scale:2});
+      const w = window.open('');
+      w.document.write("<img src='"+png+"' style='max-width:100%'>");
+    };
+
+    // search
+    document.getElementById('search').addEventListener('input', e=>{
+      const q = e.target.value.toLowerCase().trim();
+      cy.nodes().forEach(n=>{
+        const matches = !q || (n.data('id') && n.data('id').toLowerCase().includes(q)) || (n.data('label') && n.data('label').toLowerCase().includes(q));
+        n.style('opacity', matches ? 1 : 0.18);
+      });
+      cy.edges().forEach(ed=> ed.style('opacity', q ? 0.18 : 1));
+    });
+
+    // background double-click to reset
+    cy.on('tap', e=>{
+      if(e.target === cy) cy.animate({ fit: { padding: 30 }, duration: 500 });
+    });
+
+    // allow nodes to be dragged (default), and update layout after some manual drags optionally
+    cy.on('dragfree', 'node', ()=>{
+      // no-op: user-driven position is preserved
+    });
+
+    // initial fit
+    cy.ready(()=> cy.fit(40));
+  </script>
+</body>
+</html>
