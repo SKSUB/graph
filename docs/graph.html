@@ -22,6 +22,20 @@
   <div id="app">
     <div id="cy"></div>
     <div id="panel">
+      <h3>Layout Style</h3>
+      <select id="layoutSelect" style="width:100%;padding:8px;margin-bottom:12px;font-size:13px">
+        <option value="breadthfirst" selected>🌳 Tree (Top-Down)</option>
+        <option value="dagre-TB">📊 Hierarchical (Vertical)</option>
+        <option value="dagre-LR">📊 Hierarchical (Horizontal)</option>
+      </select>
+      <div style="margin-bottom:12px">
+        <label style="font-size:12px;display:flex;align-items:center;cursor:pointer">
+          <input type="checkbox" id="toggleDashed" style="margin-right:8px">
+          Show cross-references
+        </label>
+        <small style="color:#666;font-size:10px;margin-left:24px">Keep unchecked for clean tree</small>
+      </div>
+
       <h3>Controls</h3>
       <div>
         <button class="btn" id="fit">Fit</button>
@@ -313,7 +327,14 @@
         }},
         { selector: 'edge[?dashed]', style: { 'line-style':'dashed', 'target-arrow-shape':'none','line-color':'#999' } }
       ],
-      layout: { name: 'dagre', rankDir: 'TB', nodeSep: 20, edgeSep: 6, rankSep: 60 },
+      layout: { 
+        name: 'breadthfirst',
+        directed: true,
+        spacingFactor: 1.75,
+        padding: 50,
+        avoidOverlap: true,
+        nodeDimensionsIncludeLabels: true
+      },
       wheelSensitivity: 0.2
     });
 
@@ -342,6 +363,54 @@
 
     cy.on('tap', e=>{ if(e.target === cy) cy.animate({ fit: { padding: 30 }, duration: 500 }); });
     cy.on('dragfree', 'node', ()=>{});
+    
+    // Hide dashed edges by default for clean tree structure
+    cy.edges('[?dashed]').style('display', 'none');
+    
+    // Layout switcher
+    document.getElementById('layoutSelect').addEventListener('change', e=>{
+      const layoutType = e.target.value;
+      let layoutConfig;
+      
+      if (layoutType === 'breadthfirst') {
+        layoutConfig = {
+          name: 'breadthfirst',
+          directed: true,
+          spacingFactor: 1.75,
+          padding: 50,
+          avoidOverlap: true,
+          nodeDimensionsIncludeLabels: true
+        };
+      } else if (layoutType === 'dagre-TB') {
+        layoutConfig = {
+          name: 'dagre',
+          rankDir: 'TB',
+          nodeSep: 120,
+          edgeSep: 40,
+          rankSep: 200,
+          ranker: 'network-simplex'
+        };
+      } else if (layoutType === 'dagre-LR') {
+        layoutConfig = {
+          name: 'dagre',
+          rankDir: 'LR',
+          nodeSep: 100,
+          edgeSep: 30,
+          rankSep: 180,
+          ranker: 'network-simplex'
+        };
+      }
+      
+      cy.layout(layoutConfig).run();
+      setTimeout(()=> cy.fit(40), 400);
+    });
+    
+    // Toggle cross-reference (dashed) edges
+    document.getElementById('toggleDashed').addEventListener('change', e=>{
+      const show = e.target.checked;
+      cy.edges('[?dashed]').style('display', show ? 'element' : 'none');
+    });
+    
     cy.ready(()=> cy.fit(40));
   </script>
 </body>
